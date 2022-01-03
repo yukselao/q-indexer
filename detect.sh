@@ -1,9 +1,10 @@
 #!/bin/bash
 
-startdt=$1
-enddt=$2
-testip=$3
-
+startdt="$1"
+enddt="$2"
+testip="$3"
+sessionname="$4"
+key="$5"
 startts="$(date "+%s" -d "$startdt")"
 endts="$(date "+%s" -d "$enddt")"
 
@@ -25,8 +26,14 @@ for d in $(seq 0 $fark); do
 	#plog DEBUG "expr $startts + $secs"
 	mydaystart="$(date "+%F" -d @$(expr $startts + $secs + 86400))"
 	mydayend="$(date "+%F" -d @$(expr $startts + $secs + 86400))"
-	plog INFO "Processing $mydaystart ..."
-	cmd="./qactl -checkdatafilecount 551955 '$mydaystart 00:00:00' '$mydayend 23:59:59' $testip"
-	plog INFO "$cmd"
-	eval $cmd | grep FileCount
+	#plog INFO "Processing $mydaystart ..."
+	cmd="./qactl -checkdatafilecount $key '$mydaystart 00:00:00' '$mydayend 23:59:59' $testip"
+	#plog INFO "$cmd"
+	stats="$(eval $cmd | grep FileCount | paste - - | sed -r 's#.+dataFileCount is ([0-9]+).+indexFileCount is ([0-9]+).+#\1;\2#')"
+	datastat="$(echo $stats | awk -F';' '{print $1}')"
+	indexstat="$(echo $stats | awk -F';' '{print $2}')"
+	wlog "$(date "+%F %T");$mydaystart;dataFilecount:$datastat;indexFileCount:$indexstat;$cmd"
+	if [[ "$datastat" -gt 3 ]]; then
+		plog "WARNING" "index corruption detected on $mydaystart"
+	fi
 done
