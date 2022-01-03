@@ -25,6 +25,9 @@ echo $0 -deletesearch 732c9c2a-c0f1-49e6-8e20-3d4568cecea4
 echo '
 Perform a search and check dataFilecounter:'
 echo $0 -checkdatafilecount 1991 '"2021-12-13 10:00:00" "2021-12-13 10:59:00" 0.2.0.1'
+echo '
+Perform a search and check dataFilecounter:'
+echo $0 -checkdatafilecount 1991 '"2021-12-13 10:00:00" "2021-12-13 10:59:00" 0.2.0.1 10.10.2.10:32011'
 exit 0
 
 elif [[ "$1" == "-ds" ]]; then
@@ -120,30 +123,39 @@ cd /transient/ariel_proxy.ariel_proxy_server/data
 #echo done.
 #echo
 #echo
-
+function deletesearch() {
+	searchid=$i
+	echo INFO delete search id $searchid
+	echo curl -k -S -X DELETE -H "SEC: $apitoken" -H 'Version: '"${apiversion}"'' -H 'Accept: application/json' "https://$consoleip/api/ariel/searches/$searchid" result: $(curl -k -S -X DELETE -H "SEC: $apitoken" -H 'Version: '"${apiversion}"'' -H 'Accept: application/json' "https://$consoleip/api/ariel/searches/$searchid" 2>/dev/null | jq '.status')
+}
 
 if [[ "$hostid" == "" ]]; then
-	echo INFO Performing search
+	plog INFO Performing search
 	aql="select $key from events where sourceip='$ip' START '$start' STOP '$end'"
 	/bin/rm -fr /tmp/result.json
 	echo Result:
 	curl -k -S -X POST -H "SEC: $apitoken" -H 'Version: '"${apiversion}"'' -H 'Accept: application/json' "https://$consoleip/api/ariel/searches" --data-urlencode "query_expression=$aql" 2>/dev/null  -o /tmp/result.json
 	cat /tmp/result.json
         datafilecount="$(curl -k -S -X POST -H "SEC: $apitoken" -H 'Version: 16.0' -H 'Accept: application/json' "https://$consoleip/api/ariel/searches" --data-urlencode "query_expression=$aql" 2>/dev/null |tee /tmp/datafilecount.json | jq '.data_file_count')"
-        indexfilecount="$(curl -k -S -X POST -H "SEC: $apitoken" -H 'Version: 16.0' -H 'Accept: application/json' "https://$consoleip/api/ariel/searches" --data-urlencode "query_expression=$aql" 2>/dev/null |tee /tmp/datafilecount.json | jq '.index_file_count')"
+        indexfilecount="$(curl -k -S -X POST -H "SEC: $apitoken" -H 'Version: 16.0' -H 'Accept: application/json' "https://$consoleip/api/ariel/searches" --data-urlencode "query_expression=$aql" 2>/dev/null |tee /tmp/indexfilecount.json | jq '.index_file_count')"
+	searchid="$(cat /tmp/result.json | jq '.search_id' |tr -d '"')"
+	deletesearch "$searchid"
+	searchid="$(cat /tmp/datafilecount.json | jq '.search_id' |tr -d '"')"
+	deletesearch "$searchid"
+	searchid="$(cat /tmp/indexfilecount.json | jq '.search_id' |tr -d '"')"
+	deletesearch "$searchid"
 # increase HEAP size offline indexer
 else
-	echo CMD:
-	echo Result:
+	plog INFO Performing search for $hostid
 	/bin/rm -fr /tmp/result.json
 	aql="select $key from events where sourceip='$ip' START '$start' STOP '$end' PARAMETERS REMOTESERVERS='$hostid'" 
-	curl -k -S -X POST -H "SEC: $apitoken" -H 'Version: '"${apiversion}"'' -H 'Accept: application/json' "https://$consoleip/api/ariel/searches" --data-urlencode "query_expression=$aql" 2>/dev/null | jq '.data_file_count' -o /tmp/result.json
+	plog DEBUG aql=$aql
+	curl -k -S -X POST -H "SEC: $apitoken" -H 'Version: '"${apiversion}"'' -H 'Accept: application/json' "https://$consoleip/api/ariel/searches" --data-urlencode "query_expression=$aql" 2>/dev/null -o /tmp/result.json| jq '.data_file_count' 
 	cat /tmp/result.json
-        datafilecount="$(curl -k -S -X POST -H "SEC: $apitoken" -H 'Version: 16.0' -H 'Accept: application/json' "https://$consoleip/api/ariel/searches" --data-urlencode "query_expression=$aql" 2>/dev/null | jq '.data_file_count')"
-        indexfilecount="$(curl -k -S -X POST -H "SEC: $apitoken" -H 'Version: 16.0' -H 'Accept: application/json' "https://$consoleip/api/ariel/searches" --data-urlencode "query_expression=$aql" 2>/dev/null | jq '.index_file_count')"
+        datafilecount="$(curl -k -S -X POST -H "SEC: $apitoken" -H 'Version: 16.0' -H 'Accept: application/json' "https://$consoleip/api/ariel/searches" --data-urlencode "query_expression=$aql" 2>/dev/null |tee /tmp/datafilecount.json | jq '.data_file_count')"
+        indexfilecount="$(curl -k -S -X POST -H "SEC: $apitoken" -H 'Version: 16.0' -H 'Accept: application/json' "https://$consoleip/api/ariel/searches" --data-urlencode "query_expression=$aql" 2>/dev/null |tee /tmp/indexfilecount.json | jq '.index_file_count')"
 	searchid="$(cat /tmp/result.json | jq '.search_id' |tr -d '"')"
-	echo INFO delete search id $searchid
-	echo curl -k -S -X DELETE -H "SEC: $apitoken" -H 'Version: '"${apiversion}"'' -H 'Accept: application/json' "https://$consoleip/api/ariel/searches/$searchid" result: $(curl -k -S -X DELETE -H "SEC: $apitoken" -H 'Version: '"${apiversion}"'' -H 'Accept: application/json' "https://$consoleip/api/ariel/searches/$searchid" 2>/dev/null | jq '.status')
+	deletesearch "$searchid"
 
 fi
 echo
