@@ -1,6 +1,6 @@
 #!/bin/bash
 
-homedir="/opt/indexer"
+homedir="/opt/q-indexer"
 
 targethost="$1"
 startdate="$2"
