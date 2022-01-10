@@ -11,7 +11,8 @@ function print_usage() {
 '$0 '2021-12-31 10:00:00" "2021-12-31 10:59:00" 0.5.0.1 test
 '$0" 2021-12-31 10:00:00" "2021-12-31 10:59:00" 0.5.0.1 test "10.10.2.10:32011 (for AIO)"'
 '$0" 2021-12-31 10:00:00" "2021-12-31 10:59:00" 0.5.0.1 test "10.10.2.10:32006 (for EC or Datanode)"'
-'$0" 2021-12-26" "2021-12-31" 0.56.0.1 test 90001 '"'10.10.2.10:32011'" -action=fix'
+'$0" 2021-12-26 2021-12-31 0.56.0.1 test 90001 '10.10.2.10:32011' -action=fix"'
+'$0" 2022-01-06 2022-01-09 0.56.0.1 test 90001 '127.0.0.1:32006' 172.16.60.41 -action=fix"
 
 }
 
@@ -31,7 +32,7 @@ action="$8"
 startts="$(date "+%s" -d "$startdt")"
 endts="$(date "+%s" -d "$enddt")"
 
-
+plog INFO "Parameters:"
 plog INFO "[1]: startts=$startts ($startdt)"
 plog INFO "[2]: endts=$endts ($enddt)"
 plog INFO "[3]: AQL selector ip: $testip"
@@ -43,7 +44,7 @@ plog INFO "[8]: $action"
 
 
 fark="$(expr $(expr $endts - $startts) / 86400)"
-plog INFO "difference: $fark days"
+plog INFO "difference: $(expr $fark + 1) days"
 
 for d in $(seq 0 $(expr $fark)); do
 	secs="$(expr $d \* 86400)"
