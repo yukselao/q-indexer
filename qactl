@@ -1,9 +1,10 @@
 #!/bin/bash
 
-consoleip="172.16.60.10"
-apitoken="d14a1440-0083-47c8-b4f8-ec8680e9a239"
-apiversion="16.0"
 source functions.sh
+consoleip="$(getconf consoleip)"
+apitoken="$(getconf apitoken)"
+apiversion="$(getconf apiversion)"
+apiversion="16.0"
 function getsearch() {
 	searchid="$1"
 	if [[ -z "$2" ]] ;then
@@ -20,6 +21,10 @@ function getstatus() {
 }
 echo $apitoken > /tmp/mytoken
 if [[ "$1" == "-h" ]]; then
+plog INFO consoleip=$consoleip
+plog INFO apitoken=$apitoken
+plog INFO apiversion=$apiversion
+echo
 echo 'Usage:
 --
 Delete minute, super indexes:'

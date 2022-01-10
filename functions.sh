@@ -8,3 +8,7 @@ function plog() {
 function wlog() {
         echo $(date "+%F %T") $@ >> /tmp/${sessionname}.log
 }
+
+function getconf() {
+	cat config.ini |grep "$1=" |sed -r "s#^"$1'=(.+?)$#\1#'
+}

@@ -1,5 +1,8 @@
 #!/bin/bash
 
+source functions.sh
+testmhip="$(getconf testmhip)"
+
 # tüm index leri uçur
 echo "INFO delete all related search from cache (this query takes too much time on production environment)"
 for searchid in $(./qactl -listallsearches |grep '2022-01-06 18:00:00' | cut -d';' -f3 |cut -d'=' -f2); do ./qactl -deletesearch $searchid; done
