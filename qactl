@@ -4,6 +4,20 @@ consoleip="172.16.60.10"
 apitoken="d14a1440-0083-47c8-b4f8-ec8680e9a239"
 apiversion="16.0"
 source functions.sh
+function getsearch() {
+	searchid="$1"
+	if [[ -z "$2" ]] ;then
+		echo INFO get search infor for searchid=$searchid 
+		echo curl -k -S -X GET -H "SEC: $apitoken" -H 'Version: '"${apiversion}"'' -H 'Accept: application/json' "https://$consoleip/api/ariel/searches/$searchid"
+		curl -k -S -X GET -H "SEC: $apitoken" -H 'Version: '"${apiversion}"'' -H 'Accept: application/json' "https://$consoleip/api/ariel/searches/$searchid" 2>/dev/null 
+	else
+		curl -k -S -X GET -H "SEC: $apitoken" -H 'Version: '"${apiversion}"'' -H 'Accept: application/json' "https://$consoleip/api/ariel/searches/$searchid" 2>/dev/null |jq '.'$2
+	fi
+}
+function getstatus() {
+	searchid="$1"
+	curl -k -S -X GET -H "SEC: $apitoken" -H 'Version: '"${apiversion}"'' -H 'Accept: application/json' "https://$consoleip/api/ariel/searches/$searchid" 2>/dev/null |jq '.status' |tr -d '"'
+}
 echo $apitoken > /tmp/mytoken
 if [[ "$1" == "-h" ]]; then
 echo 'Usage:
@@ -16,6 +30,9 @@ echo $0 -db '"2021/12/13 11:00" 60'
 echo '
 List all searches:'
 echo $0 -listallsearches
+echo '
+Get search data :'
+echo $0 -getsearch 732c9c2a-c0f1-49e6-8e20-3d4568cecea4
 echo '
 Delete all searches:'
 echo $0 -deleteallsearches
@@ -60,6 +77,11 @@ elif [[ "$1" == "-listallsearches" ]]; then
 		echo "no=$i;$(curl -k -S -X POST -H "SEC: $apitoken" -H 'Version: '"${apiversion}"'' -H 'Accept: application/json' "https://$consoleip/api/ariel/searches/$searchid" 2>/dev/null | jq '"status=" + (.status|tostring) + ";searchid=" + (.search_id|tostring) + ";index_file_count:" + (.index_file_count|tostring) + ";data_file_count=" + (.data_file_count|tostring) + ";aql=" + (.query_string)')"
 	done
 	exit 0
+
+elif [[ "$1" == "-getsearch" ]]; then
+	getsearch $2
+	exit 0
+
 elif [[ "$1" == "-deletesearch" ]]; then
 	searchid="$2"
 	echo INFO deleting searchid=$searchid 
@@ -134,8 +156,6 @@ for searchid in $(grep "$key" /transient/ariel_proxy.ariel_proxy_server/data/*.a
 	deletesearch "$searchid"
 done
 
-echo sleep 5 seconds
-sleep 5
 
 if [[ "$hostid" == "" ]]; then
 	plog INFO Performing search
@@ -162,16 +182,25 @@ else
 
 	curl -k -S -X POST -H "SEC: $apitoken" -H 'Version: '"${apiversion}"'' -H 'Accept: application/json' "https://$consoleip/api/ariel/searches" --data-urlencode "query_expression=$aql" 2>/dev/null -o /tmp/result.json| jq '.data_file_count' 
 	cat /tmp/result.json
+	searchid="$(cat /tmp/result.json | jq '.search_id' |tr -d '"')"
+	startcounter="$(date +%s)"
+	while true; do 
+		status=$(getstatus $searchid)
+		plog "INFO searchStatus=$status"
+		sleep 1
+		if [[ "$status" == "COMPLETED" ]]; then
+			endcounter="$(date +%s)"
+			plog "INFO search completed successfully in $(expr $endcounter - $startcounter) seconds."
+			break
+		fi
 
-        datafilecount="$(curl -k -S -X POST -H "SEC: $apitoken" -H 'Version: '"${apiversion}"'' -H 'Accept: application/json' "https://$consoleip/api/ariel/searches" --data-urlencode "query_expression=$aql" 2>/dev/null |tee /tmp/datafilecount.json | jq '.data_file_count')"
-        indexfilecount="$(curl -k -S -X POST -H "SEC: $apitoken" -H 'Version: '"${apiversion}"'' -H 'Accept: application/json' "https://$consoleip/api/ariel/searches" --data-urlencode "query_expression=$aql" 2>/dev/null |tee /tmp/indexfilecount.json | jq '.index_file_count')"
+	done
+
+        datafilecount="$(getsearch $searchid data_file_count)"
+        indexfilecount="$(getsearch $searchid index_file_count)"
 
 	if [[ ! -e /tmp/do-not-delete-search ]]; then
 		searchid="$(cat /tmp/result.json | jq '.search_id' |tr -d '"')"
-		deletesearch "$searchid"
-		searchid="$(cat /tmp/datafilecount.json | jq '.search_id' |tr -d '"')"
-		deletesearch "$searchid"
-		searchid="$(cat /tmp/indexfilecount.json | jq '.search_id' |tr -d '"')"
 		deletesearch "$searchid"
 	fi
 
