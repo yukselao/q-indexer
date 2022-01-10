@@ -4,7 +4,6 @@ source functions.sh
 consoleip="$(getconf consoleip)"
 apitoken="$(getconf apitoken)"
 apiversion="$(getconf apiversion)"
-apiversion="16.0"
 function getsearch() {
 	searchid="$1"
 	if [[ -z "$2" ]] ;then
