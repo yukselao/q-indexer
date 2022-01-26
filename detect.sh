@@ -2,8 +2,8 @@
 
 
 debugmode=false
-
-source functions.sh
+cd /opt/q-indexer
+source lib/functions.sh
 
 
 function print_usage() {

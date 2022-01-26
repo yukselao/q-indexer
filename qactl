@@ -3,7 +3,7 @@
 debugmode=false
 cd /opt/q-indexer
 
-source functions.sh
+source lib/functions.sh
 consoleip="$(getconf consoleip)"
 apitoken="$(getconf apitoken)"
 apiversion="$(getconf apiversion)"
