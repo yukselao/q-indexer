@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export wlogfolder="/opt/q-indexer/logs"
+
 
 function plog() {
 	if [[ "$1" == "DEBUG" ]]; then
