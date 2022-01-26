@@ -1,6 +1,6 @@
 #!/bin/bash
 
-debugmode=true
+debugmode=false
 cd /opt/q-indexer
 
 source lib/functions.sh
@@ -12,7 +12,6 @@ export wlogfolder="/opt/q-indexer/logs/${sessionname}"
 mkdir -p $wlogfolder &>/dev/null
 
 
-echo $apitoken > /tmp/mytoken
 
 
 if [[ "$1" == "-h" ]]; then
@@ -151,24 +150,21 @@ for searchid in $(grep "$key" /transient/ariel_proxy.ariel_proxy_server/data/*.a
 done
 
 
+curlout="$wlogfolder/$(getfilename "$start" "$end")-result.json"
+
 if [[ "$hostid" == "" ]]; then
 	plog INFO Performing search
 	aql="select $key from events where sourceip='$ip' START '$start' STOP '$end'"
 	/bin/rm -fr /tmp/result.json
 	echo Result:
-	curl -k -S -X POST -H "SEC: $apitoken" -H 'Version: '"${apiversion}"'' -H 'Accept: application/json' "https://$consoleip/api/ariel/searches" --data-urlencode "query_expression=$aql" 2>/dev/null  -o /tmp/result.json
-	cat /tmp/result.json
-        datafilecount="$(curl -k -S -X POST -H "SEC: $apitoken" -H 'Version: '"${apiversion}"'' -H 'Accept: application/json' "https://$consoleip/api/ariel/searches" --data-urlencode "query_expression=$aql" 2>/dev/null |tee /tmp/datafilecount.json | jq '.data_file_count')"
-        indexfilecount="$(curl -k -S -X POST -H "SEC: $apitoken" -H 'Version: '"${apiversion}"'' -H 'Accept: application/json' "https://$consoleip/api/ariel/searches" --data-urlencode "query_expression=$aql" 2>/dev/null |tee /tmp/indexfilecount.json | jq '.index_file_count')"
-	searchid="$(cat /tmp/result.json | jq '.search_id' |tr -d '"')"
-	deletesearch "$searchid"
-	searchid="$(cat /tmp/datafilecount.json | jq '.search_id' |tr -d '"')"
-	deletesearch "$searchid"
-	searchid="$(cat /tmp/indexfilecount.json | jq '.search_id' |tr -d '"')"
+	curl -k -s -S -X POST -H "SEC: $apitoken" -H 'Version: '"${apiversion}"'' -H 'Accept: application/json' "https://$consoleip/api/ariel/searches" --data-urlencode "query_expression=$aql" -o /tmp/result.json
+	cat $curlout
+        datafilecount="$(cat $curlout | jq '.data_file_count')"
+        indexfilecount="$(cat $curlout | jq '.index_file_count')"
+	searchid="$(cat $curlout | jq '.search_id' |tr -d '"')"
 	deletesearch "$searchid"
 # increase HEAP size offline indexer
 else
-		curlout="$wlogfolder/$(getfilename "$start" "$end")-result.json"
 		plog DEBUG "Performing search for $hostid"
 		aql="select $key from events where sourceip='$ip' START '$start' STOP '$end' PARAMETERS REMOTESERVERS='$hostid'" 
 		plog DEBUG aql=$aql
@@ -177,7 +173,7 @@ else
 		curl -k -s -S -X POST -H "SEC: $apitoken" -H 'Version: '"${apiversion}"'' -H 'Accept: application/json' "https://$consoleip/api/ariel/searches" --data-urlencode "query_expression=$aql" -o $curlout
 		ret=$?
 		debuglog $cmd, exitcode=$ret
-		cat $curlout | jq '.data_file_count' 
+		plog DEBUG datafilecount=$(cat $curlout | jq '.data_file_count')
 		searchid="$(cat $curlout | jq '.search_id' |tr -d '"')"
 		startcounter="$(date +%s)"
 		while true; do 
