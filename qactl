@@ -123,12 +123,11 @@ elif [[ "$1" == "-checkdatafilecount" ]]; then
 ######
 #test parameters: qactl 1111 "2021-12-11 01:00:00" "2021-12-11 01:59:59"
 #####
-key="$2"
-ip="$5"
-start="$3"
-end="$4"
-hostid="$6"
-
+export key="$2"
+export ip="$5"
+export start="$3"
+export end="$4"
+export hostid="$6"
 #echo INFO Checking related searches
 #for searchid in $(curl -k -S -X GET -H 'Version: '"${apiversion}"'' -H 'Accept: application/json' "https://$consoleip/api/ariel/searches" --header "SEC: $apitoken" 2>/dev/null |jq '.[]' |tr -d '"'); do
 #        grep $searchid /var/log/audit/audit.log |grep $key &>/dev/null
@@ -168,13 +167,19 @@ if [[ "$hostid" == "" ]]; then
 # increase HEAP size offline indexer
 else
 		plog DEBUG "Performing search for $hostid"
-		/bin/rm -fr /tmp/result.json
 		aql="select $key from events where sourceip='$ip' START '$start' STOP '$end' PARAMETERS REMOTESERVERS='$hostid'" 
 		plog DEBUG aql=$aql
-	
-		curl -k -S -X POST -H "SEC: $apitoken" -H 'Version: '"${apiversion}"'' -H 'Accept: application/json' "https://$consoleip/api/ariel/searches" --data-urlencode "query_expression=$aql" 2>/dev/null -o /tmp/result.json| jq '.data_file_count' 
-		#cat /tmp/result.json
-		searchid="$(cat /tmp/result.json | jq '.search_id' |tr -d '"')"
+		cmd="curl -k -S -X POST -H 'SEC: $apitoken' -H 'Version: '"${apiversion}"'' -H 'Accept: application/json' 'https://$consoleip/api/ariel/searches' --data-urlencode 'query_expression=$aql'"
+		curlout="$wlogfolder/result.json"
+		/bin/rm -fr $curlout
+		curl -k -S -X POST -H "SEC: $apitoken" -H 'Version: '"${apiversion}"'' -H 'Accept: application/json' "https://$consoleip/api/ariel/searches" --data-urlencode "query_expression=$aql" 2>/dev/null -o $curlout
+		if [ $? -ne 0 ]; then
+			errorlog $cmd
+		else
+			debuglog $cmd
+		fi
+		cat $curlout | jq '.data_file_count' 
+		searchid="$(cat $curlout | jq '.search_id' |tr -d '"')"
 		startcounter="$(date +%s)"
 		while true; do 
 			status=$(getstatus $searchid)

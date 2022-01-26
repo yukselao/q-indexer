@@ -23,6 +23,8 @@ fi
 
 startdt="$1"
 enddt="$2"
+start="$1"
+end="$2"
 testip="$3"
 sessionname="$4"
 key="$5"

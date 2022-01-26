@@ -1,5 +1,6 @@
 #!/bin/bash
 
+export wlogfolder="/opt/q-indexer/logs"
 
 function plog() {
 	if [[ "$1" == "DEBUG" ]]; then
@@ -11,8 +12,27 @@ function plog() {
 	fi
 }
 
+
+function getfilename() {
+	start="$(echo "$1" |tr -d '-' |tr -d ':' |tr ' ' '-')"
+	end="$(echo "$2" |tr -d '-' |tr -d ':' |tr ' ' '-')"
+	filename=$start~$end
+	echo $filename
+}
 function wlog() {
-        echo $(date "+%F %T") $@ >> /tmp/${sessionname}.log
+	filename=$(getfilename "$start" "$end")
+	mkdir -p $wlogfolder &>/dev/null
+        echo $(date "+%F %T") $@ >> ${wlogfolder}/$filename~${sessionname}.log
+}
+function errorlog() {
+	filename=$(getfilename "$start" "$end")
+	mkdir -p $wlogfolder &>/dev/null
+        echo $(date "+%F %T") $@ >> ${wlogfolder}/$filename~${sessionname}-error.log
+}
+function debuglog() {
+	filename=$(getfilename "$start" "$end")
+	mkdir -p $wlogfolder &>/dev/null
+        echo $(date "+%F %T") $@ >> ${wlogfolder}/$filename~${sessionname}-debug.log
 }
 
 function getconf() {
